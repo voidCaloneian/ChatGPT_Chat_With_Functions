@@ -2,7 +2,8 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv()
+dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+load_dotenv(dotenv_path)
 
 DOLLAR_API_KEY = os.getenv("DOLLAR_API_KEY")
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
