@@ -5,7 +5,6 @@ from loguru import logger
 import openai
 
 from app.api_clients import get_weather, get_dollar_rate, get_weekly_news
-from app.models import FunctionCall
 from app.config import ASSISTANT
 from openai.types.chat.chat_completion_message import ChatCompletionMessage
 from openai.types.chat.chat_completion_tool_message_param import (
@@ -83,9 +82,7 @@ def process_chat_message(
 
 
 def process_tool_calls(
-    message: ChatCompletionMessage,
-    websocket: Any,
-    connection_manager: Any,
+    message: ChatCompletionMessage, websocket: Any, connection_manager: Any
 ) -> List[ChatCompletionToolMessageParam]:
     """
     Обрабатывает вызовы инструментов от ChatGPT.
@@ -96,29 +93,49 @@ def process_tool_calls(
     :return: Список ответных сообщений инструментов.
     """
     responses: List[ChatCompletionToolMessageParam] = []
+
+    # Словарь, связывающий имя функции с её реализацией
+    # Ключами являются лямбды, так как по моему опыту ChatGPT порой
+    # Способен положить параметр, который функция не ожидает,
+    # Даже если в тулзах указано другое
+    tool_functions = {
+        "get_weather": lambda args: get_weather(args.get("location", "None")),
+        "get_dollar_rate": lambda _: get_dollar_rate(),
+        "get_weekly_news": lambda args: get_weekly_news(args.get("query", "None")),
+    }
+
     if message.tool_calls:
-        logger.info("Модель решила вызвать инструменты.")
+        logger.info("Модель решила вызвать инструменты. 😊")
         connection_manager.add_message(websocket, message)
+
         for tool_call in message.tool_calls:
-            logger.info("Вызов функции: {}", tool_call.function.name)
-            function_call = FunctionCall(
-                name=tool_call.function.name,
-                arguments=json.loads(tool_call.function.arguments),
-            )
-            if function_call.name == "get_weather":
-                result = get_weather(function_call.arguments.get("location", "None"))
-            elif function_call.name == "get_dollar_rate":
-                result = get_dollar_rate()
-            elif function_call.name == "get_weekly_news":
-                result = get_weekly_news(function_call.arguments.get("query", "None"))
+            func_name = tool_call.function.name
+            logger.info("Вызов функции: {}", func_name)
+
+            # Преобразование аргументов в словарь
+            try:
+                arguments = json.loads(tool_call.function.arguments)
+            except json.JSONDecodeError as e:
+                logger.error("Ошибка декодирования JSON: {}", e)
+                arguments = {}
+
+            # Найдем функцию по имени
+            function_to_call = tool_functions.get(func_name)
+
+            # Если функция не найдена, возвращаем сообщение об ошибке
+            if function_to_call is None:
+                result = f"Функция {func_name} не найдена."
+                logger.error(result)
             else:
-                result = "Функция не найдена."
-            logger.info("Ответ функции: {}", result)
+                result = function_to_call(arguments)
+                logger.info("Ответ функции: {}", result)
+
             tool_response = ChatCompletionToolMessageParam(
                 content=str(result), role="tool", tool_call_id=tool_call.id
             )
             connection_manager.add_message(websocket, tool_response)
             responses.append(tool_response)
+
     return responses
 
 
