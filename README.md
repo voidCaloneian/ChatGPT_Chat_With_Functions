@@ -1,8 +1,6 @@
 # Chat with ChatGPT 🤖
 
-<video width="1280" height="720" controls>
-  <source src="./preview.mp4" type="video/mp4">
-</video>
+![](./preview.mp4)
 
 ## Установка и запуск
 
