@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Чат с ChatGPT 🤖</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Marked для рендеринга Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        font-family: 'Roboto', sans-serif;
+        background: #f8f9fa;
+      }
+      /* Контейнер занимает 66% ширины, центрирован и растянут по высоте */
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 66%;
+        margin: 0 auto;
+        margin-bottom: 20px;
+        font-size: 20px;
+      }
+      h1 {
+        font-weight: 700;
+        text-align: center;
+        margin: 10px 0;
+      }
+      /* Чат-блок занимает всё оставшееся пространство */
+      #chat-box {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        padding: 15px;
+        background: #ffffff;
+        border-radius: 5px;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        margin: 10px 0;
+      }
+      .chat-message {
+        margin-bottom: 15px;
+      }
+      .chat-input {
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Чат с ChatGPT</h1>
+      <div id="chat-box">
+        <!-- Сообщения чата -->
+        <div v-for="(msg, index) in messages" :key="index" class="chat-message">
+          <div v-html="renderMarkdown(msg.sender + ': \n' + msg.text)"></div>
+        </div>
+      </div>
+      <div class="input-group chat-input">
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Введите сообщение в Markdown"
+          v-model="inputMessage"
+          @keyup.enter="sendMessage"
+        />
+        <button class="btn btn-primary" @click="sendMessage">
+          Отправить
+        </button>
+      </div>
+    </div>
+
+    <script>
+      new Vue({
+        el: "#app",
+        data: {
+          messages: [],
+          inputMessage: "",
+          ws: null,
+          // Вспомогательное свойство для аккумулирования ответа в режиме стриминга
+          currentAssistantMessage: null
+        },
+        methods: {
+          renderMarkdown(markdownText) {
+            return marked.parse(markdownText);
+          },
+          sendMessage() {
+            const text = this.inputMessage.trim();
+            if (text === "") return;
+            // Добавляем сообщение пользователя
+            this.messages.push({ sender: "**Вы**", text: text });
+            // Сбрасываем текущий ответ ассистента
+            this.currentAssistantMessage = null;
+            // Отправка через WebSocket, если соединение активно
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+              this.ws.send(text);
+            }
+            this.inputMessage = "";
+          },
+          initWebSocket() {
+            const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+            this.ws = new WebSocket(protocol + "://" + window.location.host + "/api/chat/");
+            this.ws.onopen = () => {
+              console.log("WebSocket подключен 😊");
+            };
+            this.ws.onmessage = (event) => {
+              // Выводим в консоль для отладки
+              console.log("Получено сообщение:", event.data);
+            // Если ещё не начали обрабатывать ассистента, создаём новое сообщение
+            if (!this.currentAssistantMessage) {
+              this.currentAssistantMessage = { sender: "**ChatGPT**", text: "" };
+              this.messages.push(this.currentAssistantMessage);
+            }
+            // Дописываем полученный чанк в текущее сообщение ассистента
+            this.currentAssistantMessage.text += event.data;
+            // Принудительно запускаем перерисовку
+            this.$forceUpdate();
+            this.$nextTick(() => {
+              const chatBox = document.getElementById("chat-box");
+              chatBox.scrollTop = chatBox.scrollHeight;
+            });
+};
+            this.ws.onerror = (error) => {
+              console.error("Ошибка WebSocket:", error);
+            };
+            this.ws.onclose = () => {
+              console.log("WebSocket закрыт. Переподключение через 3 секунды... ⏳");
+              setTimeout(this.initWebSocket, 3000);
+            };
+          }
+        },
+        created() {
+          this.initWebSocket();
+        }
+      });
+    </script>
+  </body>
+</html>
