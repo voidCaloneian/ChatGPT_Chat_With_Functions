@@ -15,7 +15,7 @@
    source env/bin/activate # Windows: env\Scripts\activate
    pip install -r requirements.txt
 3. Укажите ваш **OpenAI** API ключ в .env файле
-   > [!Tip] 
+   > [!Note] 
    **Остальные ключи я уже указал** ;)
    
 4. Запустите сервер:
