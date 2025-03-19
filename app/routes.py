@@ -37,7 +37,7 @@ async def chat_endpoint(websocket: WebSocket) -> None:
 
             # Если ассистент вызвал инструменты, обрабатываем их
             if assistant_message.tool_calls:
-                process_tool_calls(assistant_message, websocket, manager)
+                await process_tool_calls(assistant_message, websocket, manager)
                 # Второй вызов ChatGPT с учётом результата работы инструментов
                 history = manager.get_history(websocket)
                 assistant_message = await create_stream_message(history, websocket)

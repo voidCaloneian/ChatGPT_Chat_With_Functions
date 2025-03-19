@@ -8,7 +8,6 @@ from openai.types.chat.chat_completion_message_tool_call import (
 )
 
 from app.chat_integration import (
-    process_chat_message,
     process_tool_calls,
     create_stream_message,
 )
@@ -65,31 +64,6 @@ class DummyConnectionManager:
     def add_message(self, websocket, message):
         # Добавляет сообщение в список хранящихся сообщений.
         self.messages.append(message)
-
-
-def test_process_chat_message(monkeypatch):
-    """
-    Тестирует функцию process_chat_message.
-
-    Путем подмены метода create, возвращающего заранее определенный объект-ответ,
-    проверяется, что функция корректно извлекает сообщение ответа.
-    """
-    dummy_response = type("DummyResponse", (), {})()
-    dummy_message = "dummy_response_message"
-    dummy_choice = DummyChoice(message=dummy_message)
-    dummy_response.choices = [dummy_choice]
-
-    def dummy_create(*, model, messages, tools, stream=False):
-        # Возвращаем заранее подготовленный объект, содержащий тестовое сообщение.
-        return dummy_response
-
-    monkeypatch.setattr(
-        chat_integration.openai.chat.completions, "create", dummy_create
-    )
-
-    history = [{"role": "user", "content": "Test message"}]
-    result = process_chat_message(history)
-    assert result == dummy_message
 
 
 def test_process_tool_calls(monkeypatch):

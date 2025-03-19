@@ -1,4 +1,5 @@
 import json
+import asyncio
 from typing import Any, Dict, List
 
 from loguru import logger
@@ -68,24 +69,11 @@ tools: List[Dict[str, Any]] = [
 ]
 
 
-def process_chat_message(
-    history: List[Any],
-    tools: List[Dict[str, Any]] = tools,
-) -> Any:
-    """
-    Выполняет первичный вызов ChatGPT с учетом истории сообщений и описания функций.
-    """
-    completion = openai.chat.completions.create(
-        model="gpt-4o", messages=history, tools=tools
-    )
-    return completion.choices[0].message
-
-
-def process_tool_calls(
+async def process_tool_calls(
     message: ChatCompletionMessage, websocket: Any, connection_manager: Any
 ) -> List[ChatCompletionToolMessageParam]:
     """
-    Обрабатывает вызовы инструментов от ChatGPT.
+    Асинхронно обрабатывает вызовы инструментов от ChatGPT и выполняет их параллельно.
 
     :param message: Сообщение от ChatGPT с полем tool_calls.
     :param websocket: Объект WebSocket.
@@ -95,9 +83,6 @@ def process_tool_calls(
     responses: List[ChatCompletionToolMessageParam] = []
 
     # Словарь, связывающий имя функции с её реализацией
-    # Ключами являются лямбды, так как по моему опыту ChatGPT порой
-    # Способен положить параметр, который функция не ожидает,
-    # Даже если в тулзах указано другое
     tool_functions = {
         "get_weather": lambda args: get_weather(args.get("location", "None")),
         "get_dollar_rate": lambda _: get_dollar_rate(),
@@ -105,10 +90,10 @@ def process_tool_calls(
     }
 
     if message.tool_calls:
-        logger.info("Модель решила вызвать инструменты. 😊")
+        logger.info("Модель решила вызвать инструменты 👍.")
         connection_manager.add_message(websocket, message)
 
-        for tool_call in message.tool_calls:
+        async def call_tool(tool_call) -> ChatCompletionToolMessageParam:
             func_name = tool_call.function.name
             logger.info("Вызов функции: {}", func_name)
 
@@ -121,20 +106,24 @@ def process_tool_calls(
 
             # Найдем функцию по имени
             function_to_call = tool_functions.get(func_name)
-
-            # Если функция не найдена, возвращаем сообщение об ошибке
             if function_to_call is None:
                 result = f"Функция {func_name} не найдена."
                 logger.error(result)
             else:
-                result = function_to_call(arguments)
+                # Выполняем функцию в отдельном потоке, чтобы не блокировать event loop
+                result = await asyncio.to_thread(function_to_call, arguments)
                 logger.info("Ответ функции: {}", result)
 
             tool_response = ChatCompletionToolMessageParam(
                 content=str(result), role="tool", tool_call_id=tool_call.id
             )
             connection_manager.add_message(websocket, tool_response)
-            responses.append(tool_response)
+            return tool_response
+
+        # Создаем задачи (tasks) для всех вызовов инструментов
+        tasks = [call_tool(tool_call) for tool_call in message.tool_calls]
+        # Гейзерим выполнение всех задач параллельно
+        responses = await asyncio.gather(*tasks)
 
     return responses
 
