@@ -1,9 +1,10 @@
 import json
 import asyncio
+import os
 from typing import Any, Dict, List
 
 from loguru import logger
-import openai
+from openai import AsyncOpenAI
 
 from app.api_clients import get_weather, get_dollar_rate, get_weekly_news
 from app.config import ASSISTANT
@@ -14,6 +15,10 @@ from openai.types.chat.chat_completion_tool_message_param import (
 from openai.types.chat.chat_completion_message_tool_call import (
     ChatCompletionMessageToolCall,
 )
+
+
+openai = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 # Инструменты для ChatGPT 😊
 tools: List[Dict[str, Any]] = [
@@ -139,7 +144,7 @@ async def create_stream_message(
     :param websocket: Объект WebSocket для отправки данных клиенту.
     :return: Финальное сообщение ассистента.
     """
-    stream = openai.chat.completions.create(
+    stream = await openai.chat.completions.create(
         model="gpt-4o",
         messages=history,
         tools=tools,
@@ -149,7 +154,7 @@ async def create_stream_message(
     assistant_text: str = ""
     final_tool_calls: Dict[int, Any] = {}
 
-    for chunk in stream:
+    async for chunk in stream:
         # Сбор данных по вызовам инструментов
         for tool_call in chunk.choices[0].delta.tool_calls or []:
             index: int = tool_call.index
