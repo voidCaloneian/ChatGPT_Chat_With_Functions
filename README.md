@@ -12,8 +12,9 @@
    ```
 
 ### Установка
-
 - Через **Docker**:
+> [!WARNING]
+> **Сначала укажите свой OpenAI API ключ в **.env** файле!**
    
    Билд и запуск проекта
    ```bash
@@ -24,8 +25,6 @@
    ```bash
    docker exec mcp_chatgpt coverage run --source=app -m pytest && coverage report
    ```
-> [!WARNING]
-> **Не забудьте указать свой OpenAI API ключ в **.env** файле!**
 
 - Напрямую
 
