@@ -3,25 +3,45 @@
 ![Демонстрация работы](./preview.gif)
 
 ## Установка и запуск
+  
 
 1. Клонируйте репозиторий:
    ```bash
    git clone git@github.com:voidCaloneian/ChatGPT_Chat_With_Functions.git
    cd ChatGPT_Chat_With_Functions
    ```
-2. Создайте виртуальное окружение:
+
+### Установка
+
+- Через **Docker**:
+   
+   Билд и запуск проекта
+   ```bash
+   docker build -t mcp_chatgpt . 
+   docker run -d --name mcp_chatgpt -p 8000:8000 mcp_chatgpt
+   ```
+   Опциональный запуск тестов и репорт покрытия
+   ```bash
+   docker exec mcp_chatgpt coverage run --source=app -m pytest && coverage report
+   ```
+> [!WARNING]
+> При запуске через **Docker** не забудьте указать свой OpenAI API ключ в **.env** файле!
+
+- Напрямую
+
+1. Создайте виртуальное окружение:
    ```bash
    python3 -m venv env
    source env/bin/activate # Windows: env\Scripts\activate
    pip install -r requirements.txt
-3. Укажите ваш **OpenAI** API ключ в .env файле
+2. Укажите ваш **OpenAI** API ключ в **.env** файле
    > **Остальные ключи я уже указал** 
    
-4. Запустите сервер:
+3. Запустите сервер:
    ```bash
    hypercorn main:app --bind 0.0.0.0:8000
    ```
-5. Опциональный запуск тестов 
+4. Опциональный запуск тестов 
    ```bash
    coverage run --source=app -m pytest && coverage report
    ```
