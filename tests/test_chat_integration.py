@@ -120,10 +120,12 @@ async def test_create_stream_message(monkeypatch):
     chunk2_delta = DummyDelta(content="World!", tool_calls=[])
     dummy_chunks = [DummyStreamChunk(chunk1_delta), DummyStreamChunk(chunk2_delta)]
 
-    def dummy_create(*, model, messages, tools, stream):
-        # Имитация потока: последовательно возвращает заранее определенные чанки.
-        for chunk in dummy_chunks:
-            yield chunk
+    async def dummy_create(*, model, messages, tools, stream):
+        async def inner():
+            for chunk in dummy_chunks:
+                yield chunk
+
+        return inner()
 
     monkeypatch.setattr(
         chat_integration.openai.chat.completions, "create", dummy_create
