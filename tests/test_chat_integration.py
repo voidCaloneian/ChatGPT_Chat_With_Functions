@@ -66,9 +66,10 @@ class DummyConnectionManager:
         self.messages.append(message)
 
 
-def test_process_tool_calls(monkeypatch):
+@pytest.mark.asyncio
+async def test_process_tool_calls(monkeypatch):
     """
-    Тестирует функцию process_tool_calls.
+    Тестирует асинхронную функцию process_tool_calls.
 
     Проверяется обработка вызовов инструментов, связанных с сообщениями,
     а также корректная интеграция с подменой функционала получения данных.
@@ -92,7 +93,9 @@ def test_process_tool_calls(monkeypatch):
         chat_integration, "get_weekly_news", lambda query: f"News about {query}"
     )
 
-    responses = process_tool_calls(message_obj, dummy_websocket, dummy_conn_manager)
+    responses = await process_tool_calls(
+        message_obj, dummy_websocket, dummy_conn_manager
+    )
 
     assert len(responses) == 1
     response = responses[0]
