@@ -25,7 +25,7 @@
    docker exec mcp_chatgpt coverage run --source=app -m pytest && coverage report
    ```
 > [!WARNING]
-> При запуске через **Docker** не забудьте указать свой OpenAI API ключ в **.env** файле!
+> **Не забудьте указать свой OpenAI API ключ в **.env** файле!** :
 
 - Напрямую
 
