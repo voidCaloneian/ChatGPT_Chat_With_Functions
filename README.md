@@ -23,7 +23,7 @@
    ```
    Опциональный запуск тестов и репорт покрытия
    ```bash
-   docker exec mcp_chatgpt coverage run --source=app -m pytest && coverage report
+   docker exec mcp_chatgpt sh -c "coverage run --source=app -m pytest && coverage report"
    ```
 
 - Напрямую
