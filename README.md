@@ -19,7 +19,8 @@
    Билд и запуск проекта
    ```bash
    docker build -t mcp_chatgpt . 
-   docker run -d --name mcp_chatgpt -p 8000:8000 mcp_chatgpt
+   docker run -d --name mcp_chatgpt -p 8000:8000 mcp_chatgpt # Если порт 8000 занят, то ставьте 2199:8000
+                                                             # И в таком случае заходите на localhost:2199
    ```
    Опциональный запуск тестов и репорт покрытия
    ```bash
